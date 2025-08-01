@@ -1,7 +1,5 @@
-from pathlib import Path
 import pandas as pd
 import numpy as np
-import os
 
 
 def final_integration(data, sorted_objects_clusters, similarity_matrix):

@@ -1,13 +1,8 @@
 import numpy as np
 import pandas as pd
-import clustering.Kmeans as km
 import clustering.DBSCAN as db
 import TOPSIS as ts
 import Ranking_aggregation.Copeland as cl
-import Ranking_aggregation.Borda as bd
-import Ranking_aggregation.REV as rev
-import Ranking_aggregation.MC as mc
-
 
 def rank_column(column):
     """Calculate rank for each column (higher values get better ranks)"""

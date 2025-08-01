@@ -1,9 +1,6 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import Inner_feedback_2 as In2
-import clustering.DBSCAN as db
-from clustering.CLSC import CLSC
 
 
 def pso(data, eps_SCL, eps_GCL, clusters, num, core_data, params):

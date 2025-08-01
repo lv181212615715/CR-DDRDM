@@ -1,8 +1,4 @@
 import numpy as np
-import pandas as pd
-from sklearn.metrics import cohen_kappa_score, ndcg_score, average_precision_score, jaccard_score
-from scipy.stats import spearmanr, kendalltau, pearsonr
-import os
 
 
 def test1(data):
