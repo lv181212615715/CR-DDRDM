@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/CLSC.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/DBSCAN.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Inner_feedback_1.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Inner_feedback_2.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/PSO.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Ranking_aggregation" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/TOPSIS.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/_init_.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/clustering" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/data" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/splicing_integration.py" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/test.py" charset="GBK" />
+  </component>
+</project>
