@@ -1,12 +1,12 @@
 import numpy as np
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import KDTree
 from itertools import product
-
 from sklearn.metrics import silhouette_score
 
 
-def DBSCAN_clustering_1(X):
-    """Optimized DBSCAN clustering with automatic parameter selection.
+def DBSCAN_clustering_optimized(X):
+    """Optimized DBSCAN clustering with proper silhouette scoring for core points only.
 
     Args:
         X: Input data matrix (features x samples)
@@ -18,63 +18,93 @@ def DBSCAN_clustering_1(X):
         best_params: Dictionary of optimal parameters (eps, min_samples)
     """
     # Transpose input matrix (features x samples -> samples x features)
-    X = np.array(X).T
+    X_data = np.array(X).T
 
-    # Parameter search ranges
-    eps_range = np.arange(0.001, 1.001, 0.05).tolist()
-    min_samples_range = np.arange(5, 21, 5).tolist()
+    # Parameter search ranges (adjusted based on data characteristics)
+    eps_range = np.arange(0.1, 1.1, 0.1).tolist()  # Slightly larger step for efficiency
+    min_samples_range = [5, 10, 15, 20]
 
     # Initialize tracking variables
     best_score = -1
     best_params = {'eps': None, 'min_samples': None}
+    best_labels = None
     best_clusters = None
     best_centers = None
 
     # Grid search over parameter combinations
     for eps, min_samples in product(eps_range, min_samples_range):
         # Perform DBSCAN clustering
-        dbscan = DBSCAN(eps=eps, min_samples=min_samples).fit(X)
-        labels = dbscan.labels_
+        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+        labels = dbscan.fit_predict(X_data)
 
-        # Reassign noise points to nearest cluster
-        noise_label = -1
-        new_labels = np.copy(labels)
-        if noise_label in set(labels):
-            for i, label in enumerate(labels):
-                if label == noise_label:
-                    # Calculate distances to all non-noise points
-                    distances = [(np.linalg.norm(X[i] - X[j]), j, lbl)
-                                 for j, lbl in enumerate(labels) if lbl != noise_label]
-                    # Find nearest non-noise point
-                    if distances:
-                        _, closest_idx, closest_label = min(distances, key=lambda x: x[0])
-                        new_labels[i] = closest_label  # Assign to nearest cluster
+        # Identify core points (non-noise)
+        core_mask = labels != -1
+        core_labels = labels[core_mask]
 
-        # Evaluate clustering quality
-        if len(set(new_labels)) > 1:  # Need at least 2 clusters for silhouette score
-            score = silhouette_score(X, new_labels)
+        # Skip if insufficient core points or clusters for silhouette score
+        if np.sum(core_mask) < 2 or len(np.unique(core_labels)) < 2:
+            continue
 
-            # Update best results if current score is better
-            if score > best_score:
-                best_score = score
-                best_params['eps'] = eps
-                best_params['min_samples'] = min_samples
+        # Calculate silhouette score using core points only
+        score = silhouette_score(X_data[core_mask], core_labels)
 
-                # Organize clusters by label
-                clusters = {label: [] for label in set(new_labels)}
-                for idx, label in enumerate(new_labels):
-                    clusters[label].append(idx)
+        # Update best results if current score is better
+        if score > best_score:
+            best_score = score
+            best_params['eps'] = eps
+            best_params['min_samples'] = min_samples
+            best_labels = labels.copy()  # Store original labels for later processing
 
-                # Calculate representative centers
-                center_points = []
-                for label, points in clusters.items():
-                    geometric_center = np.mean(points, axis=0)
-                    center_point = points[np.argmin([np.linalg.norm(point - geometric_center)
-                                                     for point in points])]
-                    center_points.append(center_point)
+    # If no valid clustering found, use default parameters
+    if best_labels is None:
+        best_params = {'eps': 0.5, 'min_samples': 10}
+        dbscan = DBSCAN(eps=best_params['eps'], min_samples=best_params['min_samples'])
+        best_labels = dbscan.fit_predict(X_data)
 
-                # Sort clusters by label and store results
-                best_clusters = [clusters[label] for label in sorted(clusters.keys())]
-                best_centers = center_points
+    # Step 2: Noise point reassignment (post-parameter-selection)
+    noise_mask = best_labels == -1
+    core_mask = ~noise_mask
 
-    return best_clusters, len(best_clusters), best_centers, best_params
+    if np.any(noise_mask):
+        # Build KDTree for efficient nearest neighbor search
+        core_points = X_data[core_mask]
+        core_labels = best_labels[core_mask]
+        kdtree = KDTree(core_points)
+
+        # Find nearest core point for each noise point
+        noise_points = X_data[noise_mask]
+        distances, indices = kdtree.query(noise_points, k=1)
+
+        # Assign noise points to nearest core point's cluster
+        for i, (noise_idx, core_idx) in enumerate(zip(np.where(noise_mask)[0], indices.flatten())):
+            # Find original core point index in full dataset
+            original_core_idx = np.where(core_mask)[0][core_idx]
+            best_labels[noise_idx] = best_labels[original_core_idx]
+
+    # Organize final clusters
+    unique_labels = np.unique(best_labels[best_labels != -1])
+    clusters = {label: [] for label in unique_labels}
+
+    for idx, label in enumerate(best_labels):
+        clusters[label].append(idx)
+
+    # Calculate representative centers (geometric medoid)
+    center_points = []
+    for label in sorted(clusters.keys()):
+        cluster_points = X_data[clusters[label]]
+
+        if len(cluster_points) > 0:
+            # Calculate geometric center
+            geometric_center = np.mean(cluster_points, axis=0)
+
+            # Find point closest to geometric center (medoid)
+            distances = np.linalg.norm(cluster_points - geometric_center, axis=1)
+            medoid_idx = np.argmin(distances)
+            center_points.append(cluster_points[medoid_idx])
+        else:
+            center_points.append(None)
+
+    # Prepare final cluster list
+    final_clusters = [clusters[label] for label in sorted(clusters.keys())]
+
+    return final_clusters, len(final_clusters), center_points, best_params
