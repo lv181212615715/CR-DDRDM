@@ -5,7 +5,7 @@ from itertools import product
 from sklearn.metrics import silhouette_score
 
 
-def DBSCAN_clustering_optimized(X):
+def DBSCAN_clustering_1(X):
     """Optimized DBSCAN clustering with proper silhouette scoring for core points only.
 
     Args:
